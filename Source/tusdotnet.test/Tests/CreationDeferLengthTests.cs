@@ -10,6 +10,7 @@ using tusdotnet.Models.Configuration;
 using tusdotnet.test.Data;
 using tusdotnet.test.Extensions;
 using Xunit;
+using tusdotnet.test.Helpers;
 #if netfull
 using Owin;
 #endif
@@ -27,21 +28,7 @@ namespace tusdotnet.test.Tests
             var callForwarded = false;
 
             var store = Substitute.For<ITusStore, ITusCreationDeferLengthStore>();
-
-            using var server = TestServerFactory.Create(app =>
-            {
-                app.UseTus(context => new DefaultTusConfiguration
-                {
-                    UrlPath = "/files",
-                    Store = store
-                });
-
-                app.Run(ctx =>
-                {
-                    callForwarded = true;
-                    return Task.FromResult(true);
-                });
-            });
+            using var server = TestServerFactory.CreateWithForwarding(Substitute.For<ITusStore, ITusCreationDeferLengthStore>(), () => { }, () => callForwarded = true);
 
             await server.CreateRequest("/files")
                 .AddTusResumableHeader()
@@ -232,13 +219,14 @@ namespace tusdotnet.test.Tests
         public async Task UploadLength_Must_Be_Included_In_Patch_Request_If_UploadDeferLength_Has_Been_Set(
             string methodToUse)
         {
-            var store = Substitute.For<ITusStore, ITusCreationStore, ITusCreationDeferLengthStore>();
-            store.FileExistAsync(null, CancellationToken.None).ReturnsForAnyArgs(true);
-            store.GetUploadLengthAsync(null, CancellationToken.None).ReturnsForAnyArgs((long?)null);
+
+            var fileId = Guid.NewGuid().ToString();
+            var store = MockStoreHelper.CreateWithExtensions<ITusCreationStore, ITusCreationDeferLengthStore>();
+            store.WithExistingFile(fileId, null);
 
             using var server = TestServerFactory.Create(store);
 
-            var response = await server.CreateRequest($"/files{Guid.NewGuid()}")
+            var response = await server.CreateRequest($"/files/{fileId}")
                 .AddTusResumableHeader()
                 .AddHeader("Upload-Offset", "0")
                 .OverrideHttpMethodIfNeeded("PATCH", methodToUse)

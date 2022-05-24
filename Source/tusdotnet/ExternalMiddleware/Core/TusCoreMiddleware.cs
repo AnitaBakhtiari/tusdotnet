@@ -41,7 +41,7 @@ namespace tusdotnet
                 return;
             }
 
-            var requestUri = GetRequestUri(context);
+            var requestUri = DotnetCoreAdapterFactory.GetRequestUri(context);
 
             if (!TusProtocolHandlerIntentBased.RequestIsForTusEndpoint(requestUri, config))
             {
@@ -49,8 +49,8 @@ namespace tusdotnet
                 return;
             }
 
-            var request = CreateRequestAdapter(context, config, requestUri);
-            var response = CreateResponseAdapter(context);
+            var request = DotnetCoreAdapterFactory.CreateRequestAdapter(context, config.UrlPath, requestUri);
+            var response = DotnetCoreAdapterFactory.CreateResponseAdapter(context);
 
             var handled = await TusProtocolHandlerIntentBased.Invoke(new ContextAdapter
             {
@@ -65,39 +65,6 @@ namespace tusdotnet
             {
                 await _next(context);
             }
-        }
-
-        private RequestAdapter CreateRequestAdapter(HttpContext context, DefaultTusConfiguration config, Uri requestUri)
-        {
-            return new RequestAdapter(config.UrlPath)
-            {
-                Headers =
-                    context.Request.Headers.ToDictionary(
-                        f => f.Key,
-                        f => f.Value.ToList(),
-                        StringComparer.OrdinalIgnoreCase),
-                Body = context.Request.Body,
-#if pipelines
-                BodyReader = context.Request.BodyReader,
-#endif
-                Method = context.Request.Method,
-                RequestUri = requestUri
-            };
-        }
-
-        private static Uri GetRequestUri(HttpContext context)
-        {
-            return new Uri($"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}{context.Request.Path}");
-        }
-
-        private ResponseAdapter CreateResponseAdapter(HttpContext context)
-        {
-            return new ResponseAdapter
-            {
-                Body = context.Response.Body,
-                SetHeader = (key, value) => context.Response.Headers[key] = value,
-                SetStatus = status => context.Response.StatusCode = (int)status
-            };
-        }
+        }       
     }
 }
