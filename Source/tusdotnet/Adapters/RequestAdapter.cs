@@ -29,6 +29,8 @@ namespace tusdotnet.Adapters
 
         public string FileId => _fileId.Value;
 
+        public string ConfigUrlPath => _configUrlPath;
+
         public long UploadLength => _uploadLength.Value;
 
         private readonly Lazy<string> _fileId;
@@ -39,6 +41,7 @@ namespace tusdotnet.Adapters
         {
             _fileId = new Lazy<string>(() => ParseFileId());
             _uploadLength = new Lazy<long>(() => ParseUploadLength());
+
             _configUrlPath = configUrlPath;
         }
 

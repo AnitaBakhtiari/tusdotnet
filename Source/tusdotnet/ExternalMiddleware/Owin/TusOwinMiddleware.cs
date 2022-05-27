@@ -34,11 +34,13 @@ namespace tusdotnet
         {
             var config = await _configFactory(context.Request);
 
-            if(config == null)
+            if (config == null)
             {
                 await Next.Invoke(context);
                 return;
             }
+
+            MiddlewareConfigurationValidator.Instance.Validate(config);
 
             if (!TusProtocolHandlerIntentBased.RequestIsForTusEndpoint(context.Request.Uri, config))
             {
